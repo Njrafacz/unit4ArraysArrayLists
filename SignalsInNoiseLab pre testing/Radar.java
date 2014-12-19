@@ -1,40 +1,39 @@
 import java.util.Scanner;
+import java.util.Random;
 /**
- * The model for radar
- * Holds all instance variables used throughout the lab.
+ * The model for radar scan and accumulator
  * 
  * @author @njrafacz
- * @version 18 December 2014
+ * @version 17 December 2014
  */
 public class Radar
 {
     
     // stores whether each cell triggered detection for the current scan of the radar
     private boolean[][] currentScan;
-    //stores values found to be true within the original range of the monster.
+    
     private int [][] candidatePosition = new int[100][100];
-    //holds the coordinates for points to be found true in candidatePosition
-    private  int [] coordinateHolderX;
-    private  int [] coordinateHolderY;
-    //stores  x and y velocities
+    private int [][] accumulator;
+    public static int [] coordinateHolderX;
+    public static int [] coordinateHolderY;
     private int xVelocity;
     private int yVelocity;
-    //stores the x and y velocities of points in candidatePosition
-    private  int [] xVelocityHolder;
-    private  int [] yVelocityHolder;
+    public static int [] xVelocityHolder;
+    public static int [] yVelocityHolder;
     
     
     //stores the x and y distances that the monster moves
     private int monsterDx;
     private int monsterDy;
+    private double monsterSlope;
     
+    // stores the value of the point slope to this 2d array
+    private double pointSlope;
+    private int [][]slopes;
     
     // location of the monster
     private int monsterLocationRow;
     private int monsterLocationCol;
-    //stores the value of the monster's x and y velocities found via the algorithm.
-    private int discoveredMonsterDx;
-    private int discoveredMonsterDy;
 
     // probability that a cell will trigger a false detection (must be >= 0 and < 1)
     private double noiseFraction;
@@ -52,24 +51,37 @@ public class Radar
     {
         // initialize instance variables
         currentScan = new boolean[rows][cols]; // elements will be set to false
+        accumulator = new int[rows][cols]; // elements will be set to 0
         coordinateHolderX = new int[100];
         coordinateHolderY = new int[100];// elements will be set to 0
         xVelocityHolder = new int[100];
         yVelocityHolder = new int[100];
-        //randomly set the location of the monster (can be explicity set through the
-        //setMonsterLocation method
+        // randomly set the location of the monster (can be explicity set through the
+        //  setMonsterLocation method
+        Scanner scan = new Scanner(System.in);
+        System.out.println("Set the monster's starting row: ");
+        monsterLocationRow = scan.nextInt();
+        System.out.println("Set the monster's starting column: ");
+        monsterLocationCol = scan.nextInt();
+        
+        System.out.println("To set the Dx of the monster please enter a number between 1 and 5 ");
+        monsterDx = scan.nextInt();
+        System.out.println("To set the Dy of the monster please enter a number between 1 and 5 ");
+        monsterDy = scan.nextInt();
+        
+        
+        monsterSlope = 1.00 * monsterDy / monsterDx;
             
         noiseFraction = 0.05;
         numScans= 0;
     }
     
     /**
-     * Performs a scan of the radar. Creates an array of possible monster locations which are then stored into a list if they are detected to be true.
+     * Performs a scan of the radar. Noise is injected into the grid and the accumulator is updated.
      * 
      */
     public void scan()
     {
-        //This series of "if" statements finds the range around the monster that could possibly be the monster.
         int minX = monsterLocationRow -5;
         if(minX <0)
         {
@@ -90,7 +102,7 @@ public class Radar
         {
             maxY = 99;
         }
-        //This loops through that range and any points found to be true are stored in a list for further manipulation.
+        
         for(int monsterRow =minX; monsterRow<=maxX; monsterRow++)
         {
             for (int monsterCol = minY; monsterCol<=maxY; monsterCol++)
@@ -106,15 +118,9 @@ public class Radar
      
         
     }
-    /**
-     * Calculates the slopes of the point stored in candidatePosition from scan method.
-     * If the velocity is equal to zero, that means it is calculating the monster point, and automatically sets the velocity of that point to the inputted monster velocity.
-     * Values are stored into 4 different arrays that hold x and y coordinates, and x and y velocities. The indexes will match for each array will match for a specific point.
-     */
     public void calculateSlopes()
     {
         int counter =0;
-        //this nested for loop calculates the x and y velocities for the points found in candidatePosition and stores them in two different arrays.
         for(int row = 0; row < candidatePosition.length; row ++)
         {
             for( int col = 0; col < candidatePosition[0].length; col++)
@@ -140,10 +146,6 @@ public class Radar
             }
         }
     }
-    /**
-     * Detects future points in the grid to compare against points found to be true in the first iteration via scan. 
-     * If a point is invalid in any way, the x and y coordinate are set to 0, and the x and y velocities set to -20.
-     */
     public void detectFuturePoint(int scanNum)
     {
         int spots = 0;
@@ -180,10 +182,6 @@ public class Radar
             }
         }
     }
-    /**
-     * Updates the position of the monster. If the monster attempts to go past the size of Radar, it will set the monster coordinates to (99,99)
-     * After updating the position of the monster, it will set that point in currentScan to true. 
-     */
     public void monsterMove()
     {
         monsterLocationRow = monsterLocationRow + monsterDx;
@@ -199,6 +197,10 @@ public class Radar
         currentScan[monsterLocationRow][monsterLocationCol] = true;
         System.out.println("THE MONSTER HAS MOVED");
 
+    }
+    public int getAccumulatedDetection(int row, int col)
+    {
+        return accumulator[row][col];
     }
      /**
      * Sets the probability that a given cell will generate a false detection
@@ -271,141 +273,6 @@ public class Radar
             }
         }
     }
-    /**
-     * Sets the monster Location Row
-     * @param row  sets the value of monsterLocationRow equal to this.
-     * 
-     */
-    public void setMonsterLocationRow(int row)
-    {
-        monsterLocationRow = row;
-    }
-    /**
-     * Sets the monster Location Column
-     * @param col  sets the value of monsterLocationCol equal to this.
-     */
-    public void setMonsterLocationCol(int col)
-    {
-        monsterLocationCol = col;
-    }
-    /**
-     * Sets the monster's x velocity
-     * @param monsterVelocityX  sets the value of monsterDx equal to this.
-     */
-    public void setMonsterDx( int monsterVelocityX)
-    {
-        monsterDx = monsterVelocityX;
-    }
-    /**
-     * Sets the monster's y velocity.
-     * @param monsterVelocityY  sets the value of monsterDy equal to this.
-     */
-    public void setMonsterDy(int monsterVelocityY)
-    {
-        monsterDy = monsterVelocityY;
-    }
-    /**
-     * Returns the monster's x velocity found via the algorithm.
-     * 
-     */
-    public int getDiscoveredDx()
-    {
-        return discoveredMonsterDx;
-    }
-    /**
-     * Returns the monster's y velocity found via the algorithm.
-     * 
-     */
-    public int getDiscoveredDy()
-    {
-        return discoveredMonsterDy;
-    }
-    /**
-     * Stores the monster's x velocity found via the algorithm.
-     * @param x  sets the value of discoveredMonsterDx equal to this.
-     */
-    public void setDiscoveredDx(int x)
-    {
-        discoveredMonsterDx = x;
-    }
-    /**
-     * Stores the monster's y velocity found via the algorithm.
-     * @param y sets the value of discoveredMonsterDy equal to this.
-     */
-    public void setDiscoveredDy(int y)
-    {
-        discoveredMonsterDy = y;
-    }
-    /**
-     * Finds the x and y velocity of the monster.
-     * This is the main algorithm.
-     * 
-     */
-    public int findMonsterVelocity()
-    {
-        boolean firstTime = true;
-        for(int i = 1; i < 100; i++)
-        {
-            monsterMove();
-            injectNoise();
-            if(firstTime == true)
-            {
-            scan();
-            calculateSlopes();
-            firstTime = false;
-        }
-        else{
-            int scanNum = i-1;
-            detectFuturePoint(scanNum);
-            int counter = 0;
-            int saveJ = 0;
-            for(int j =0; j < xVelocityHolder.length; j++)
-            {
-                if(xVelocityHolder[j] > 0 && yVelocityHolder[j] >0)
-                {
-                    
-                    counter+=1;
-                    saveJ=j;
-                }
-            }
-            if(counter == 1)
-                    {
-                        setDiscoveredDx(xVelocityHolder[saveJ]);
-                        setDiscoveredDy(yVelocityHolder[saveJ]);
-                        i = 100;
-                    }
-        }
-            
-        }
-        return 0;
-        }
-     
-       public static void main(String[] args) 
-    {
-        int monsterLocationRow1;
-        int monsterLocationCol1;
-        int monsterDx1;
-        int monsterDy1;
-        Radar radar = new Radar(100,100);
-        Scanner scan = new Scanner(System.in);
-        System.out.println("Set the monster's starting row: ");
-        monsterLocationRow1 = scan.nextInt();
-        radar.setMonsterLocationRow(monsterLocationRow1);
-        System.out.println("Set the monster's starting column: ");
-        monsterLocationCol1 = scan.nextInt();
-        radar.setMonsterLocationCol(monsterLocationCol1);
-        System.out.println("To set the Dx of the monster please enter a number between 1 and 5 ");
-        monsterDx1 = scan.nextInt();
-        radar.setMonsterDx(monsterDx1);
-        System.out.println("To set the Dy of the monster please enter a number between 1 and 5 ");
-        monsterDy1 = scan.nextInt();
-        radar.setMonsterDy(monsterDy1);
-        radar.findMonsterVelocity();
-        radar.getDiscoveredDx();
-        System.out.println("This is the monster's x velocity: " + radar.getDiscoveredDx());
-        radar.getDiscoveredDy();
-        System.out.println("This is the monster's y velocity: " + radar.getDiscoveredDy());
-}
-    }
     
+    }
 
